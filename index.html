@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三门问题闯关游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        body {
+            background: #f0f8ff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .game-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+        .doors {
+            display: flex;
+            justify-content: space-around;
+            margin: 2rem 0;
+        }
+        .door {
+            width: 150px;
+            height: 250px;
+            background: #3498db;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .door:hover {
+            background: #2980b9;
+            transform: translateY(-5px);
+        }
+        .door.selected {
+            background: #e74c3c;
+        }
+        .door.opened {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .door .prize {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .door.opened .prize {
+            opacity: 1;
+        }
+        .controls {
+            text-align: center;
+            margin: 2rem 0;
+        }
+        .btn {
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 0 1rem;
+            transition: all 0.3s ease;
+        }
+        .btn-switch {
+            background: #2ecc71;
+            color: white;
+        }
+        .btn-switch:hover {
+            background: #27ae60;
+        }
+        .btn-stay {
+            background: #f39c12;
+            color: white;
+        }
+        .btn-stay:hover {
+            background: #d35400;
+        }
+        .btn-reset {
+            background: #9b59b6;
+            color: white;
+        }
+        .btn-reset:hover {
+            background: #8e44ad;
+        }
+        .stats {
+            background: #ecf0f1;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-top: 2rem;
+        }
+        .stats h3 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.5rem 0;
+            font-size: 1.1rem;
+        }
+        .message {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 1rem 0;
+            min-height: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚪 三门问题闯关游戏 🚗</h1>
+    <div class="game-container">
+        <div class="message" id="message">请选择一扇门！</div>
+        <div class="doors">
+            <div class="door" id="door1" data-door="1">
+                1
+                <div class="prize" id="prize1"></div>
+            </div>
+            <div class="door" id="door2" data-door="2">
+                2
+                <div class="prize" id="prize2"></div>
+            </div>
+            <div class="door" id="door3" data-door="3">
+                3
+                <div class="prize" id="prize3"></div>
+            </div>
+        </div>
+        <div class="controls" id="controls">
+            <button class="btn btn-switch" id="switchBtn" style="display: none;">换门！</button>
+            <button class="btn btn-stay" id="stayBtn" style="display: none;">不换！</button>
+            <button class="btn btn-reset" id="resetBtn" style="display: none;">再来一局</button>
+        </div>
+        <div class="stats">
+            <h3>📊 统计数据</h3>
+            <div class="stats-item">
+                <span>总游戏次数：</span>
+                <span id="totalGames">0</span>
+            </div>
+            <div class="stats-item">
+                <span>换门中奖次数：</span>
+                <span id="switchWins">0</span>
+            </div>
+            <div class="stats-item">
+                <span>换门中奖率：</span>
+                <span id="switchRate">0%</span>
+            </div>
+            <div class="stats-item">
+                <span>不换中奖次数：</span>
+                <span id="stayWins">0</span>
+            </div>
+            <div class="stats-item">
+                <span>不换中奖率：</span>
+                <span id="stayRate">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏状态
+        let gameState = 'selecting'; // selecting / opened / ended
+        let carDoor = Math.floor(Math.random() * 3) + 1;
+        let selectedDoor = null;
+        let openedDoor = null;
+        let switchWins = 0;
+        let stayWins = 0;
+        let totalGames = 0;
+
+        // DOM元素
+        const doors = document.querySelectorAll('.door');
+        const message = document.getElementById('message');
+        const switchBtn = document.getElementById('switchBtn');
+        const stayBtn = document.getElementById('stayBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const totalGamesEl = document.getElementById('totalGames');
+        const switchWinsEl = document.getElementById('switchWins');
+        const switchRateEl = document.getElementById('switchRate');
+        const stayWinsEl = document.getElementById('stayWins');
+        const stayRateEl = document.getElementById('stayRate');
+
+        // 初始化奖品
+        function initPrizes() {
+            doors.forEach(door => {
+                const prize = door.querySelector('.prize');
+                const doorNum = parseInt(door.dataset.door);
+                if (doorNum === carDoor) {
+                    prize.textContent = '🚗';
+                } else {
+                    prize.textContent = '🐐';
+                }
+            });
+        }
+
+        // 开门（主持人开山羊门）
+        function openGoatDoor() {
+            const availableDoors = [1, 2, 3].filter(d => d !== selectedDoor && d !== carDoor);
+            openedDoor = availableDoors[Math.floor(Math.random() * availableDoors.length)];
+            const doorEl = document.getElementById(`door${openedDoor}`);
+            doorEl.classList.add('opened');
+            gameState = 'opened';
+            message.textContent = `我打开了${openedDoor}号门，里面是山羊！要不要换门？`;
+            switchBtn.style.display = 'inline-block';
+            stayBtn.style.display = 'inline-block';
+        }
+
+        // 显示所有门
+        function showAllDoors() {
+            doors.forEach(door => {
+                door.classList.add('opened');
+            });
+        }
+
+        // 更新统计数据
+        function updateStats() {
+            totalGamesEl.textContent = totalGames;
+            switchWinsEl.textContent = switchWins;
+            stayWinsEl.textContent = stayWins;
+            const switchRate = totalGames > 0 ? (switchWins / (totalGames - stayWins) * 100).toFixed(1) : 0;
+            const stayRate = totalGames > 0 ? (stayWins / (totalGames - switchWins) * 100).toFixed(1) : 0;
+            switchRateEl.textContent = `${switchRate}%`;
+            stayRateEl.textContent = `${stayRate}%`;
+        }
+
+        // 重置游戏
+        function resetGame() {
+            gameState = 'selecting';
+            carDoor = Math.floor(Math.random() * 3) + 1;
+            selectedDoor = null;
+            openedDoor = null;
+            doors.forEach(door => {
+                door.classList.remove('selected', 'opened');
+            });
+            initPrizes();
+            message.textContent = '请选择一扇门！';
+            switchBtn.style.display = 'none';
+            stayBtn.style.display = 'none';
+            resetBtn.style.display = 'none';
+        }
+
+        // 事件监听：选门
+        doors.forEach(door => {
+            door.addEventListener('click', () => {
+                if (gameState !== 'selecting') return;
+                const doorNum = parseInt(door.dataset.door);
+                selectedDoor = doorNum;
+                door.classList.add('selected');
+                openGoatDoor();
+            });
+        });
+
+        // 事件监听：换门
+        switchBtn.addEventListener('click', () => {
+            if (gameState !== 'opened') return;
+            const newSelectedDoor = [1, 2, 3].find(d => d !== selectedDoor && d !== openedDoor);
+            const oldDoorEl = document.getElementById(`door${selectedDoor}`);
+            const newDoorEl = document.getElementById(`door${newSelectedDoor}`);
+            oldDoorEl.classList.remove('selected');
+            newDoorEl.classList.add('selected');
+            selectedDoor = newSelectedDoor;
+            showAllDoors();
+            gameState = 'ended';
+            totalGames++;
+            if (selectedDoor === carDoor) {
+                switchWins++;
+                message.textContent = '🎉 恭喜你！换门中奖了！';
+            } else {
+                message.textContent = '😢 很遗憾，换门没中奖！';
+            }
+            switchBtn.style.display = 'none';
+            stayBtn.style.display = 'none';
+            resetBtn.style.display = 'inline-block';
+            updateStats();
+        });
+
+        // 事件监听：不换
+        stayBtn.addEventListener('click', () => {
+            if (gameState !== 'opened') return;
+            showAllDoors();
+            gameState = 'ended';
+            totalGames++;
+            if (selectedDoor === carDoor) {
+                stayWins++;
+                message.textContent = '🎉 恭喜你！不换中奖了！';
+            } else {
+                message.textContent = '😢 很遗憾，不换没中奖！';
+            }
+            switchBtn.style.display = 'none';
+            stayBtn.style.display = 'none';
+            resetBtn.style.display = 'inline-block';
+            updateStats();
+        });
+
+        // 事件监听：重置
+        resetBtn.addEventListener('click', resetGame);
+
+        // 初始化游戏
+        initPrizes();
+    </script>
+</body>
+</html>
